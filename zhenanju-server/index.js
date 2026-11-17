@@ -41,7 +41,12 @@ app.use((req, res, next) => {
 
 
 // ---------- 数据层：本地 JSON + Netlify Blobs ----------
-const DATA_DIR = path.join(__dirname, 'data')
+const LOCAL_DATA_DIR = path.join(__dirname, 'data')
+const DEPLOY_DATA_DIR = path.join(__dirname, '..', '..', 'zhenanju-server', 'data')
+
+const DATA_DIR = fs.existsSync(LOCAL_DATA_DIR)
+  ? LOCAL_DATA_DIR
+  : DEPLOY_DATA_DIR
 
 function readData(fileName, fallback) {
   const filePath = path.join(DATA_DIR, fileName)
