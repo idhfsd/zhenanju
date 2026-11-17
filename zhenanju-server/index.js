@@ -234,6 +234,19 @@ app.post('/api/alerts/:id/handle', async (req, res) => {
   ok(res, found, '预警已处理')
 })
 
+// 恢复预警为未处理（用于管理员重新分配处理）
+app.post('/api/alerts/:id/unhandle', async (req, res) => {
+  const found = alerts.find(a => a.id === req.params.id)
+  if (!found) return fail(res, 404, `预警 ${req.params.id} 不存在`)
+
+  found.handled = false
+  delete found.handledAt
+  delete found.handledBy
+
+  await writeData('alerts.json', alerts)
+  ok(res, found, '预警已恢复为未处理')
+})
+
 // ============================================================
 // 8. 新闻动态
 // ============================================================
