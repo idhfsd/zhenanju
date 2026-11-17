@@ -69,23 +69,38 @@ const isNetlify =
   Boolean(process.env.LAMBDA_TASK_ROOT)
 
 let blobStorePromise
+// 记录 Blobs 上下文是否已在本次运行时初始化（Lambda 兼容模式下需要外部传入事件凭据）
+let blobsContextReady = false
+
+// 在 Netlify Function 入口里、每次请求前调用：把事件携带的 Blobs 凭据接进运行时。
+// 不传参（本地开发 / 标准 Functions 自动注入上下文）时不做处理。
+function initBlobsContext(event) {
+  if (!event || !event.blobs) return
+  try {
+    // eslint-disable-next-line global-require
+    const blobs = require('@netlify/blobs')
+    if (typeof blobs.connectLambda === 'function') {
+      blobs.connectLambda(event)
+      blobsContextReady = true
+    }
+  } catch (err) {
+    console.warn('connectLambda 初始化 Blobs 失败：', err.message)
+  }
+}
 
 function getBlobStore() {
-  if (!blobStorePromise) {
-    // @netlify/blobs 是 ESM 包；CommonJS 下用动态 import 拿到它的 getStore。
-    // 包内同时提供 CJS 入口，require 失败时再退回动态 import，保证两种运行环境都能取到。
-    blobStorePromise = Promise.resolve().then(() => {
-      try {
-        // eslint-disable-next-line global-require
-        const blobs = require('@netlify/blobs')
-        return blobs.getStore('zhenanju-data')
-      } catch (requireErr) {
-        return import('@netlify/blobs').then(({ getStore }) =>
-          getStore('zhenanju-data')
-        )
-      }
-    })
-  }
+  // 每次都重新取 store：Lambda 兼容模式下凭据来自事件上下文，避免复用旧的未初始化 store。
+  blobStorePromise = Promise.resolve().then(() => {
+    try {
+      // eslint-disable-next-line global-require
+      const blobs = require('@netlify/blobs')
+      return blobs.getStore('zhenanju-data')
+    } catch (requireErr) {
+      return import('@netlify/blobs').then(({ getStore }) =>
+        getStore('zhenanju-data')
+      )
+    }
+  })
   return blobStorePromise
 }
 
@@ -130,7 +145,13 @@ async function writeData(fileName, data) {
 // 第一次收到请求前，先从云端加载已保存的数据
 let dataReady
 
+// 供 Netlify Function 入口在每次请求前把 Lambda 事件传进来，完成 Blobs 凭据绑定
+app.initBlobsContext = initBlobsContext
+
 app.use((req, res, next) => {
+  // serverless-http 会把原始 Lambda 事件挂在 req 上；先绑定 Blobs 上下文再读云端数据
+  if (req.netlifyEvent) initBlobsContext(req.netlifyEvent)
+
   if (!dataReady) dataReady = loadPersistentData()
 
   dataReady.then(() => next()).catch(next)

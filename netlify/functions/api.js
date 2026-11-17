@@ -4,5 +4,11 @@
 const serverless = require('serverless-http')
 const app = require('../../zhenanju-server/index.js')
 
-// serverless-http 会把 Netlify 的事件转换成 Node req/res，Express 路由按原样工作。
-exports.handler = serverless(app)
+// 先把 Lambda 事件里携带的 Netlify Blobs 凭据接进运行时，再交给 Express 处理。
+// Lambda 兼容模式下 Blobs 上下文不会自动注入，必须在 getStore 之前调用 connectLambda。
+const wrapped = serverless(app)
+
+exports.handler = async (event, context) => {
+  app.initBlobsContext(event)
+  return wrapped(event, context)
+}
