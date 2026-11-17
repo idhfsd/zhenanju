@@ -1,0 +1,18 @@
+{
+  "name": "zhenanju-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "震安居 - 农村老旧房屋微震动监测预警系统（Express 后端）",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "keywords": ["震安居", "房屋监测", "express"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
