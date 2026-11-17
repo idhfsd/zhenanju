@@ -234,17 +234,39 @@ app.post('/api/alerts/:id/handle', async (req, res) => {
   ok(res, found, '预警已处理')
 })
 
-// 恢复预警为未处理（用于管理员重新分配处理）
+// 恢复预警为未处理
 app.post('/api/alerts/:id/unhandle', async (req, res) => {
-  const found = alerts.find(a => a.id === req.params.id)
-  if (!found) return fail(res, 404, `预警 ${req.params.id} 不存在`)
+  try {
+    const found = alerts.find(a => a.id === req.params.id)
 
-  found.handled = false
-  delete found.handledAt
-  delete found.handledBy
+    if (!found) {
+      return fail(res, 404, `预警 ${req.params.id} 不存在`)
+    }
 
-  await writeData('alerts.json', alerts)
-  ok(res, found, '预警已恢复为未处理')
+    // 先保存原状态，写入失败时可以恢复
+    const oldHandled = found.handled
+    const oldHandledAt = found.handledAt
+    const oldHandledBy = found.handledBy
+
+    found.handled = false
+    delete found.handledAt
+    delete found.handledBy
+
+    try {
+      await writeData('alerts.json', alerts)
+    } catch (writeError) {
+      // 写入失败，恢复内存中的原状态
+      found.handled = oldHandled
+      if (oldHandledAt !== undefined) found.handledAt = oldHandledAt
+      if (oldHandledBy !== undefined) found.handledBy = oldHandledBy
+      throw writeError
+    }
+
+    return ok(res, found, '预警已恢复为未处理')
+  } catch (err) {
+    console.error('恢复预警失败：', err)
+    return fail(res, 500, `恢复失败：${err.message || '云端数据写入异常'}`)
+  }
 })
 
 // ============================================================
