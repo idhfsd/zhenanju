@@ -1,12 +1,11 @@
-
 {
   "name": "zhenanju",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@netlify/blobs": "^11.1.9",
-    "@netlify/server": "^0.1.6",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "serverless-http": "^4.0.0"
   }
 }
