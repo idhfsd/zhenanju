@@ -11,7 +11,7 @@ const props = defineProps({
   alert: { type: Object, default: null }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'updated'])
 
 // 级别映射
 const levelMap = {
@@ -33,6 +33,8 @@ const handleResolve = async () => {
       operator: '系统管理员'
     })
     showToast(res.msg || '预警处理成功', 'success')
+    // 把后端返回的最新状态同步给父组件，再关闭弹窗
+    emit('updated', res.data)
     emit('close')
   } catch (err) {
     showToast(err.message || '预警处理失败', 'error')
@@ -49,6 +51,8 @@ const handleUnresolve = async () => {
   try {
     const res = await request.post(`/alerts/${props.alert.id}/unhandle`, {})
     showToast(res.msg || '预警已恢复为未处理', 'success')
+    // 把后端返回的最新状态同步给父组件，再关闭弹窗
+    emit('updated', res.data)
     emit('close')
   } catch (err) {
     showToast(err.message || '恢复预警失败', 'error')

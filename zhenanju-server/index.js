@@ -58,20 +58,33 @@ function readData(fileName, fallback) {
   }
 }
 
-// 本地开发使用 JSON 文件；Netlify Functions 环境使用 Blobs
+// 本地开发使用 JSON 文件；Netlify Server / Functions 环境使用 Blobs
+// 注意：Netlify Server 运行时只会注入 AWS_LAMBDA_FUNCTION_NAME / LAMBDA_TASK_ROOT 这类变量，
+// 不一定有 NETLIFY_SITE_ID，因此下面四个条件用「或」并列，括号缺一不可。
 const isNetlify =
   process.env.NETLIFY === 'true' ||
   Boolean(process.env.NETLIFY_SITE_ID) ||
-  Boolean(process.env.SITE_ID)
+  Boolean(process.env.SITE_ID) ||
   Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
   Boolean(process.env.LAMBDA_TASK_ROOT)
+
 let blobStorePromise
 
-async function getBlobStore() {
+function getBlobStore() {
   if (!blobStorePromise) {
-    blobStorePromise = import('@netlify/blobs').then(({ getStore }) =>
-      getStore('zhenanju-data')
-    )
+    // @netlify/blobs 是 ESM 包；CommonJS 下用动态 import 拿到它的 getStore。
+    // 包内同时提供 CJS 入口，require 失败时再退回动态 import，保证两种运行环境都能取到。
+    blobStorePromise = Promise.resolve().then(() => {
+      try {
+        // eslint-disable-next-line global-require
+        const blobs = require('@netlify/blobs')
+        return blobs.getStore('zhenanju-data')
+      } catch (requireErr) {
+        return import('@netlify/blobs').then(({ getStore }) =>
+          getStore('zhenanju-data')
+        )
+      }
+    })
   }
   return blobStorePromise
 }
@@ -84,19 +97,26 @@ let inquiries = readData('inquiries.json', [])
 async function loadPersistentData() {
   if (!isNetlify) return
 
-  const store = await getBlobStore()
+  try {
+    const store = await getBlobStore()
 
-  const [savedAlerts, savedInquiries] = await Promise.all([
-    store.get('alerts', { type: 'json' }),
-    store.get('inquiries', { type: 'json' })
-  ])
+    const [savedAlerts, savedInquiries] = await Promise.all([
+      store.get('alerts', { type: 'json' }),
+      store.get('inquiries', { type: 'json' })
+    ])
 
-  if (savedAlerts !== null) alerts = savedAlerts
-  if (savedInquiries !== null) inquiries = savedInquiries
+    // Blobs 里没有对应 key 时返回 null，这时保留仓库自带的默认 JSON 数据
+    if (savedAlerts !== null && Array.isArray(savedAlerts)) alerts = savedAlerts
+    if (savedInquiries !== null && Array.isArray(savedInquiries)) inquiries = savedInquiries
+  } catch (err) {
+    // 云端读取失败不能直接打挂整个服务，退回默认数据并在日志里留痕
+    console.warn('从 Netlify Blobs 读取数据失败，使用默认数据：', err.message)
+  }
 }
 
 async function writeData(fileName, data) {
   if (isNetlify) {
+    // Netlify 实例的文件系统是只读且临时的，必须写进 Blobs 才能跨请求 / 跨重启保留
     const store = await getBlobStore()
     const key = fileName.replace('.json', '')
     await store.setJSON(key, data)
@@ -359,10 +379,19 @@ app.use((err, req, res, next) => {
   fail(res, 500, '服务器内部错误')
 })
 
-app.listen(PORT, () => {
-  console.log('============================================')
-  console.log(`  震安居后端服务已启动：http://localhost:${PORT}`)
-  console.log(`  健康检查：http://localhost:${PORT}/api/health`)
-  console.log(`  点位列表：http://localhost:${PORT}/api/monitor/points`)
-  console.log('============================================')
-})
+// 导出 app，方便在 Netlify Server 入口里复用同一份 Express 应用
+module.exports = app
+
+// 只有直接用 Node 运行本文件（本地开发 / 云服务器）时才真正监听端口；
+// 被 Netlify Server 作为模块导入时，由平台接管监听，这里不再自己 listen。
+const isDirectRun = require.main === module
+
+if (isDirectRun) {
+  app.listen(PORT, () => {
+    console.log('============================================')
+    console.log(`  震安居后端服务已启动：http://localhost:${PORT}`)
+    console.log(`  健康检查：http://localhost:${PORT}/api/health`)
+    console.log(`  点位列表：http://localhost:${PORT}/api/monitor/points`)
+    console.log('============================================')
+  })
+}

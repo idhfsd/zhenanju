@@ -90,6 +90,21 @@ const selectedAlert = ref(null)
 const openAlert = (alert) => {
   selectedAlert.value = alert
 }
+
+// 用后端返回的最新预警对象，就地更新本地列表里的同一条记录。
+// 这样在「关闭弹窗 → 重新拉列表」的间隙，界面也不会先回显成旧的未处理状态。
+const patchAlert = (updated) => {
+  if (!updated || !updated.id) return
+  const index = alerts.value.findIndex((a) => a.id === updated.id)
+  if (index !== -1) {
+    alerts.value[index] = { ...alerts.value[index], ...updated }
+  }
+  // 弹窗里展示的也是同一条数据，同步刷新避免按钮状态滞后
+  if (selectedAlert.value && selectedAlert.value.id === updated.id) {
+    selectedAlert.value = { ...selectedAlert.value, ...updated }
+  }
+}
+
 // 关闭弹窗：顺手重新拉一次预警列表
 // 这样「标记已处置」成功后，待处理数量能立刻刷新（不用手动刷新页面）
 const closeAlert = () => {
@@ -178,7 +193,7 @@ const closeAlert = () => {
     </section>
 
     <!-- 预警详情弹窗（父组件控制显示与否） -->
-    <AlertModal :alert="selectedAlert" @close="closeAlert" />
+    <AlertModal :alert="selectedAlert" @close="closeAlert" @updated="patchAlert" />
   </div>
 </template>
 

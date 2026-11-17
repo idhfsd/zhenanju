@@ -1,0 +1,24 @@
+# ============================================================
+# 震安居 · Netlify 部署配置
+# 前端：Vue3 + Vite，构建产物在 zhenanju-vue/dist
+# 后端：Express 应用，通过 netlify/server/index.mjs 作为 Netlify Server 运行
+# ============================================================
+
+[build]
+  # 先装前端依赖并构建 dist；后端依赖由 Netlify Server 打包时自动安装
+  command = "cd zhenanju-vue && npm install && npm run build"
+  # 静态资源发布目录（页面、JS、CSS、图标）
+  publish = "zhenanju-vue/dist"
+
+# 只把接口请求交给后端服务；静态文件由 CDN 直接发布，优先级高于服务
+[[redirects]]
+  from = "/api/*"
+  to = "/api/:splat"
+  status = 200
+  force = true
+
+# 前端是 history 路由（单页应用），刷新子路径时回退到 index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
