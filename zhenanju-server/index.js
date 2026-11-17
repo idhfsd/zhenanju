@@ -58,10 +58,12 @@ function readData(fileName, fallback) {
   }
 }
 
-// 本地开发继续使用 JSON 文件；Netlify 部署使用 Blobs
-const isNetlify = process.env.NETLIFY === 'true' ||
-  Boolean(process.env.NETLIFY_SITE_ID)
-
+// 本地开发使用 JSON 文件；Netlify Functions 环境使用 Blobs
+const isNetlify =
+  process.env.NETLIFY === 'true' ||
+  Boolean(process.env.NETLIFY_SITE_ID) ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+  Boolean(process.env.LAMBDA_TASK_ROOT)
 let blobStorePromise
 
 async function getBlobStore() {
