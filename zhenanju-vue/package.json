@@ -1,0 +1,22 @@
+{
+  "name": "zhenanju-vue",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "震安居 - 农村老旧房屋低成本微震动监测预警系统（Vue3 前端）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.21.1",
+    "echarts": "^5.5.0",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "vite": "^5.2.11"
+  }
+}
