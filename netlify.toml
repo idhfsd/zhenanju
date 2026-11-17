@@ -5,8 +5,9 @@
 # ============================================================
 
 [build]
-  # 先装前端依赖并构建 dist；后端依赖由 Netlify Server 打包时自动安装
-  command = "cd zhenanju-vue && npm install && npm run build"
+  # 根目录先装后端/Server 依赖（express、cors、@netlify/blobs、@netlify/server），
+  # 再进前端目录安装并构建 dist。Netlify Server 运行时从根目录解析这些模块。
+  command = "npm install && cd zhenanju-vue && npm install && npm run build"
   # 静态资源发布目录（页面、JS、CSS、图标）
   publish = "zhenanju-vue/dist"
 
