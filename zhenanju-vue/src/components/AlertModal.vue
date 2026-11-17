@@ -1,11 +1,7 @@
+
 <script setup>
 // ============================================
 // 预警详情弹窗组件
-// 知识要点：
-// 1. props 接收 alert；父组件传入 null 时弹窗隐藏（v-if 控制）
-// 2. watch 监听 alert 变化，在打开时记录「处理中」状态
-// 3. emit('close') 通知父组件关闭弹窗
-// 4. Teleport 传送到 body，避免被页面布局遮挡
 // ============================================
 import { ref, watch } from 'vue'
 import { showToast } from '../composables/useToast'
@@ -24,11 +20,10 @@ const levelMap = {
   info: { label: '提示信息', icon: 'fa-circle-info', color: 'var(--info)' }
 }
 
-// 处理中标记：请求未返回前禁用按钮，防止重复提交
+// 请求处理中标记
 const processing = ref(false)
 
-// 标记已处置：真正调用后端 POST /api/alerts/:id/handle，
-// 由后端把该条预警的 handled 置为 true 并写入 alerts.json
+// 标记已处置
 const handleResolve = async () => {
   if (!props.alert || processing.value) return
 
@@ -38,18 +33,34 @@ const handleResolve = async () => {
       operator: '系统管理员'
     })
     showToast(res.msg || '预警处理成功', 'success')
-    emit('close') // 通知父组件关闭弹窗（父组件会顺带刷新预警列表）
+    emit('close')
   } catch (err) {
-    showToast(err.message, 'error')
+    showToast(err.message || '预警处理失败', 'error')
   } finally {
     processing.value = false
   }
 }
 
-// 关闭
+// 恢复为未处理
+const handleUnresolve = async () => {
+  if (!props.alert || processing.value) return
+
+  processing.value = true
+  try {
+    const res = await request.post(`/alerts/${props.alert.id}/unhandle`, {})
+    showToast(res.msg || '预警已恢复为未处理', 'success')
+    emit('close')
+  } catch (err) {
+    showToast(err.message || '恢复预警失败', 'error')
+  } finally {
+    processing.value = false
+  }
+}
+
+// 关闭弹窗
 const handleClose = () => emit('close')
 
-// 监听 alert 变化：新弹窗打开时重置「处理中」状态（watch 演示）
+// 监听弹窗数据变化
 watch(
   () => props.alert,
   (val) => {
@@ -61,7 +72,6 @@ watch(
 </script>
 
 <template>
-  <!-- 父组件通过 v-if="alert" 控制：alert 为 null 时不渲染 -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="alert" class="modal-mask" @click.self="handleClose">
@@ -71,8 +81,8 @@ watch(
             <h3>
               <i
                 class="fas"
-                :class="levelMap[alert.level].icon"
-                :style="{ color: levelMap[alert.level].color }"
+                :class="levelMap[alert.level]?.icon || 'fa-circle-info'"
+                :style="{ color: levelMap[alert.level]?.color || 'var(--info)' }"
               ></i>
               预警详情
             </h3>
@@ -87,23 +97,27 @@ watch(
               <span class="m-label">预警编号</span>
               <span class="m-value">{{ alert.id }}</span>
             </div>
+
             <div class="m-row">
               <span class="m-label">预警级别</span>
               <span
                 class="m-level"
-                :style="{ color: levelMap[alert.level].color }"
+                :style="{ color: levelMap[alert.level]?.color || 'var(--info)' }"
               >
-                {{ levelMap[alert.level].label }}
+                {{ levelMap[alert.level]?.label || alert.level }}
               </span>
             </div>
+
             <div class="m-row">
               <span class="m-label">发生时间</span>
               <span class="m-value">{{ alert.time }}</span>
             </div>
+
             <div class="m-row">
               <span class="m-label">监测点位</span>
               <span class="m-value">{{ alert.point }}</span>
             </div>
+
             <div class="m-row m-row--desc">
               <span class="m-label">预警详情</span>
               <p class="m-desc">{{ alert.message }}</p>
@@ -113,6 +127,17 @@ watch(
           <!-- 弹窗底部按钮 -->
           <div class="modal-footer">
             <button
+              v-if="alert.handled"
+              class="btn btn-outline btn-sm"
+              :disabled="processing"
+              @click="handleUnresolve"
+            >
+              <i class="fas fa-rotate-left"></i>
+              {{ processing ? '处理中…' : '恢复为未处理' }}
+            </button>
+
+            <button
+              v-else
               class="btn btn-outline btn-sm"
               :disabled="processing"
               @click="handleResolve"
@@ -120,7 +145,12 @@ watch(
               <i class="fas fa-check"></i>
               {{ processing ? '处理中…' : '标记已处置' }}
             </button>
-            <button class="btn btn-primary btn-sm" @click="handleClose">
+
+            <button
+              class="btn btn-primary btn-sm"
+              :disabled="processing"
+              @click="handleClose"
+            >
               知道了
             </button>
           </div>
