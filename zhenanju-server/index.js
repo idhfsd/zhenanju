@@ -39,8 +39,8 @@ app.use((req, res, next) => {
   next()
 })
 
-// ---------- 数据层：用 JSON 文件当“数据库” ----------
-// 好处：不装数据库也能持久化，重启后咨询记录、预警处理状态都不会丢
+
+// ---------- 数据层：本地 JSON + Netlify Blobs ----------
 const DATA_DIR = path.join(__dirname, 'data')
 
 function readData(fileName, fallback) {
@@ -53,16 +53,61 @@ function readData(fileName, fallback) {
   }
 }
 
-function writeData(fileName, data) {
-  const filePath = path.join(DATA_DIR, fileName)
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+// 本地开发继续使用 JSON 文件；Netlify 部署使用 Blobs
+const isNetlify = process.env.NETLIFY === 'true' ||
+  Boolean(process.env.NETLIFY_SITE_ID)
+
+let blobStorePromise
+
+async function getBlobStore() {
+  if (!blobStorePromise) {
+    blobStorePromise = import('@netlify/blobs').then(({ getStore }) =>
+      getStore('zhenanju-data')
+    )
+  }
+  return blobStorePromise
 }
 
-// 启动时一次性读进内存，读请求直接查内存，写请求再落盘
 let points = readData('points.json', [])
 let alerts = readData('alerts.json', [])
 let news = readData('news.json', [])
 let inquiries = readData('inquiries.json', [])
+
+async function loadPersistentData() {
+  if (!isNetlify) return
+
+  const store = await getBlobStore()
+
+  const [savedAlerts, savedInquiries] = await Promise.all([
+    store.get('alerts', { type: 'json' }),
+    store.get('inquiries', { type: 'json' })
+  ])
+
+  if (savedAlerts !== null) alerts = savedAlerts
+  if (savedInquiries !== null) inquiries = savedInquiries
+}
+
+async function writeData(fileName, data) {
+  if (isNetlify) {
+    const store = await getBlobStore()
+    const key = fileName.replace('.json', '')
+    await store.setJSON(key, data)
+    return
+  }
+
+  const filePath = path.join(DATA_DIR, fileName)
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+}
+
+// 第一次收到请求前，先从云端加载已保存的数据
+let dataReady
+
+app.use((req, res, next) => {
+  if (!dataReady) dataReady = loadPersistentData()
+
+  dataReady.then(() => next()).catch(next)
+})
+
 
 // 统一响应格式：{ code, msg, data }
 // code 约定：200 成功 / 400 参数错误 / 404 资源不存在 / 500 服务异常
@@ -172,7 +217,7 @@ app.get('/api/alerts', (req, res) => {
 // ============================================================
 // 7. 处理预警（把 handled 置为 true，并写入处理时间）
 // ============================================================
-app.post('/api/alerts/:id/handle', (req, res) => {
+app.post('/api/alerts/:id/handle', async (req, res) => {
   const found = alerts.find(a => a.id === req.params.id)
   if (!found) return fail(res, 404, `预警 ${req.params.id} 不存在`)
 
@@ -180,7 +225,7 @@ app.post('/api/alerts/:id/handle', (req, res) => {
   found.handledAt = new Date().toLocaleString('zh-CN', { hour12: false })
   found.handledBy = req.body && req.body.operator ? String(req.body.operator) : '系统管理员'
 
-  writeData('alerts.json', alerts) // 落盘，重启服务仍保留
+  await writeData('alerts.json', alerts)
   ok(res, found, '预警已处理')
 })
 
@@ -197,7 +242,7 @@ app.get('/api/news', (req, res) => {
 // ============================================================
 const EMAIL_RE = /^[\w.+-]+@[\w-]+\.[\w.-]+$/
 
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', async (req, res) => {
   const { name, email, content } = req.body || {}
 
   const nameStr = (name || '').trim()
@@ -223,7 +268,7 @@ app.post('/api/contact', (req, res) => {
   }
 
   inquiries.unshift(record)
-  writeData('inquiries.json', inquiries) // 持久化到文件
+  await writeData('inquiries.json', inquiries) // 持久化到文件
 
   ok(res, record, '提交成功，我们将尽快与您联系！')
 })
