@@ -62,6 +62,7 @@ function readData(fileName, fallback) {
 const isNetlify =
   process.env.NETLIFY === 'true' ||
   Boolean(process.env.NETLIFY_SITE_ID) ||
+  Boolean(process.env.SITE_ID)
   Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
   Boolean(process.env.LAMBDA_TASK_ROOT)
 let blobStorePromise
