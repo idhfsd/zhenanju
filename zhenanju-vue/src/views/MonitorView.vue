@@ -126,7 +126,7 @@ const closeAlert = () => {
     <!-- 加载中 / 加载失败提示（loading、loadError 由接口请求状态驱动） -->
     <div v-if="loading" class="data-tip">监测数据加载中…</div>
     <div v-else-if="loadError" class="data-tip data-tip-error">
-      数据加载失败：{{ loadError }}（请确认后端服务已启动 http://localhost:3000）
+      数据加载失败：{{ loadError }}（请确认后端服务已启动）
     </div>
 
     <!-- 统计卡片 -->

@@ -21,8 +21,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    // 开发代理：把页面里 /api 开头的请求转发给本地 Express（3000 端口）
-    // 这样前端代码里只写 /api，开发环境和线上环境的行为保持一致
+    // 开发代理：页面里请求 /api/xxx，实际转发到本机 3000 端口的后端。
+    // 这样前端代码统一用相对路径 /api，本地和后端同源（不用处理跨域），
+    // 上线后由 Netlify 的环境变量 VITE_API_BASE 指向 Render 上的真实地址。
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

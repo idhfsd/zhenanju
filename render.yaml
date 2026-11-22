@@ -1,0 +1,29 @@
+# Render 部署配置（Blueprint）
+# 用法：把整个项目推到 GitHub，Render 后台 New → Blueprint，选中这个仓库即可自动读取本文件。
+# 免费实例的限制：15 分钟无请求会休眠、磁盘不持久（重启后 data/*.json 回到仓库初始版本）。
+services:
+  - type: web
+    name: zhenanju-api
+    runtime: python
+    plan: free
+    # 后端在子目录里，构建和启动都从这个目录开始
+    rootDir: zhenanju-fastapi
+    buildCommand: pip install -r requirements.txt
+    # Render 会把端口注入到 $PORT，main.py 里也是读这个变量
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # 部署时在面板里填 Netlify 的站点地址，多个用英文逗号分隔
+      # 例：https://zhenanju.netlify.app,http://localhost:5173
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # 想放行 Netlify 的推送预览域名再填，不需要就留空
+      - key: ALLOW_ORIGIN_REGEX
+        sync: false
+      # 查看咨询记录的口令：设了之后 GET /api/contact 必须带请求头 X-Admin-Token
+      # 本地不设就自动放行，演示不受影响；线上强烈建议设一个随机字符串
+      - key: ADMIN_TOKEN
+        sync: false
+      # 以后升级到付费并挂了持久盘，把这里改成挂载路径（如 /var/data）即可，代码不用动
+      # - key: DATA_DIR
+      #   value: /var/data

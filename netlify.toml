@@ -1,40 +1,18 @@
-# ============================================================
-# 震安居 · Netlify 部署配置
-# 前端：Vue3 + Vite，构建产物在 zhenanju-vue/dist（静态资源由 CDN 发布）
-# 后端：Express 应用，包装成传统 Netlify Function 运行（netlify/functions/api.js）
-# ============================================================
-
+# Netlify 部署配置
+# 仓库根目录有这个文件，Netlify 连上仓库后会自动按下面的命令构建。
 [build]
-  # 根目录先装后端函数依赖（express、cors、@netlify/blobs、serverless-http），
-  # 再进前端目录安装并构建 dist。
-  command = "npm install && cd zhenanju-vue && npm install && npm run build"
-  # 静态资源发布目录（页面、JS、CSS、图标）
+  # 前端在 zhenanju-vue 子目录里，先进去再装依赖、构建
+  command = "cd zhenanju-vue && npm ci && npm run build"
   publish = "zhenanju-vue/dist"
 
-# ------------------------------------------------------------
-# Functions 打包配置
-# esbuild 打包函数；express 等保留在函数包的 node_modules 中，避免运行时找不到模块。
-# ------------------------------------------------------------
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-  external_node_modules = [
-    "express",
-    "cors",
-    "serverless-http",
-    "@netlify/blobs"
-  ]
-  # 把后端默认 JSON 数据打进函数包（云端无 Blobs 记录时作为兜底）
-  included_files = ["zhenanju-server/data/**"]
+# 如果 Netlify 后台把 Base directory 设成了 zhenanju-vue，
+# 上面两行就要相应改成 command = "npm ci && npm run build"、publish = "dist"
 
-# 只把接口请求交给后端函数；静态文件由 CDN 直接发布，优先级高于函数
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
+[build.environment]
+  NODE_VERSION = "18"
 
-# 前端是 history 路由（单页应用），刷新子路径时回退到 index.html
+# 前端用的是 hash 路由（/#/monitor），正常不需要这条；
+# 留着是为了以后切成 history 模式时页面刷新不 404
 [[redirects]]
   from = "/*"
   to = "/index.html"

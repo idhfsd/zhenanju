@@ -1,0 +1,10 @@
+[
+  { "id": "ZJ-001", "name": "西渡镇槐花村李家老宅", "address": "西渡镇·槐花村", "status": "normal", "battery": 87, "signal": 92, "vibration": 0.06, "tilt": 0.08, "lastUpdate": "10:25:31" },
+  { "id": "ZJ-002", "name": "洪市镇杨村陈氏老屋", "address": "洪市镇·杨村", "status": "normal", "battery": 76, "signal": 85, "vibration": 0.09, "tilt": 0.11, "lastUpdate": "10:25:28" },
+  { "id": "ZJ-003", "name": "三湖镇龟石村刘家祖屋", "address": "三湖镇·龟石村", "status": "warning", "battery": 42, "signal": 78, "vibration": 0.35, "tilt": 0.42, "lastUpdate": "10:24:59" },
+  { "id": "ZJ-004", "name": "渣江镇秋夏村王宅", "address": "渣江镇·秋夏村", "status": "normal", "battery": 91, "signal": 95, "vibration": 0.05, "tilt": 0.06, "lastUpdate": "10:25:33" },
+  { "id": "ZJ-005", "name": "金溪镇登山村赵家老宅", "address": "金溪镇·登山村", "status": "danger", "battery": 63, "signal": 71, "vibration": 0.78, "tilt": 0.95, "lastUpdate": "10:24:12" },
+  { "id": "ZJ-006", "name": "岘山镇白竹村周氏老屋", "address": "岘山镇·白竹村", "status": "normal", "battery": 82, "signal": 88, "vibration": 0.07, "tilt": 0.09, "lastUpdate": "10:25:26" },
+  { "id": "ZJ-007", "name": "井头镇青山村冯家老宅", "address": "井头镇·青山村", "status": "normal", "battery": 68, "signal": 90, "vibration": 0.08, "tilt": 0.1, "lastUpdate": "10:25:20" },
+  { "id": "ZJ-008", "name": "曲兰镇太平村唐家祖屋", "address": "曲兰镇·太平村", "status": "warning", "battery": 51, "signal": 80, "vibration": 0.28, "tilt": 0.31, "lastUpdate": "10:23:47" }
+]

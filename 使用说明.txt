@@ -1,0 +1,54 @@
+震安居 —— 农村老旧房屋微震动监测预警系统
+前后端完整源码包
+============================================================
+
+一、目录说明
+  zhenanju-vue\      Vue3 前端（Vite + vue-router + ECharts）
+  zhenanju-server\   Express 后端（含 data\ 下的 JSON 数据文件）
+
+二、首次运行准备（需先安装 Node.js 18+）
+  分别在两个目录下执行：
+      npm install
+
+三、启动顺序（必须两个都开，各占一个终端）
+  终端 1：
+      cd zhenanju-server
+      npm start
+      启动后地址：http://localhost:3000
+
+  终端 2：
+      cd zhenanju-vue
+      npm run dev
+      启动后地址：http://localhost:5173
+
+四、验证是否联通
+  浏览器打开 http://localhost:3000/api/monitor/stats
+  能看到 JSON 数据即表示后端正常；
+  再打开 http://localhost:5173/#/monitor
+  页面上的点位数、趋势图、预警列表均来自后端接口。
+  点击任意预警 → 弹窗内「标记已处置」→ 待处理数量立即 -1，
+  对应 alerts.json 里该条记录 handled 会变成 true。
+
+五、常见问题
+  1. 页面提示"数据加载失败"
+     原因：后端没启动，或端口不是 3000。
+     处理：先启动 zhenanju-server；若改了端口，需同步修改
+           zhenanju-vue\src\api\request.js 里的 baseURL。
+  2. npm install 报网络错误
+     处理：换用国内镜像 npm config set registry https://registry.npmmirror.com
+  3. 端口被占用
+     处理：改 zhenanju-server\index.js 里的 PORT 常量，
+           或关掉占用 3000 端口的进程。
+
+六、功能实现要点（答辩可讲）
+  1. 前后端分离：5173 前端 + 3000 后端，CORS 跨域通信。
+  2. 数据持久化：JSON 文件存储，重启服务后处置状态与咨询记录不丢失。
+  3. 预警处置：弹窗按钮调用 POST /api/alerts/:id/handle，
+     请求中按钮禁用防重复提交，成功后父页面重新拉取列表刷新待处理数。
+  4. 趋势图自动刷新：setInterval 每 10 分钟请求一次 /api/monitor/trend，
+     组件卸载时 clearInterval，避免定时器泄漏。
+  5. 待处理数量：只统计「未处置」的 danger/warning 级别预警。
+
+七、打包说明
+  本包已排除 node_modules、dist 与日志文件，体积小；
+  拿到后先 npm install 再做后面的步骤即可。
