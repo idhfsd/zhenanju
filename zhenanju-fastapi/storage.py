@@ -7,12 +7,26 @@
 # ============================================================
 import json
 import os
+import shutil
 import threading
 from pathlib import Path
 
 # __file__ 是当前文件路径，parent 就是 zhenanju-fastapi/ 目录
 # 上线后如果挂了持久化磁盘，只要设环境变量 DATA_DIR=/var/data 就能换目录，不用改代码
-DATA_DIR = Path(os.getenv("DATA_DIR") or (Path(__file__).parent / "data"))
+DEFAULT_DATA_DIR = Path(__file__).parent / "data"
+DATA_DIR = Path(os.getenv("DATA_DIR") or DEFAULT_DATA_DIR)
+
+# 云平台给的持久化目录一开始是空的（比如魔搭创空间的 /mnt/workspace），
+# 首次启动时把项目自带的 4 个 JSON 复制过去当初始数据，之后读写都落在这个目录
+if DATA_DIR != DEFAULT_DATA_DIR:
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        for source in DEFAULT_DATA_DIR.glob("*.json"):
+            target = DATA_DIR / source.name
+            if not target.exists():
+                shutil.copyfile(source, target)
+    except OSError as exc:
+        print(f"初始化数据目录失败（使用项目内置数据）：{exc}")
 
 # 写文件时加锁：避免两个请求同时写同一个 JSON 导致内容写坏
 _lock = threading.Lock()
