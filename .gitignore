@@ -25,3 +25,6 @@ dist/
 Thumbs.db
 .idea/
 .vscode/
+
+# Hugging Face Space 部署副本，代码与 zhenanju-fastapi 重复，单独一个仓库
+zhenanju-space/
